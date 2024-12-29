@@ -1,0 +1,10 @@
+model Menu {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Float
+  discount    Float?
+  description String?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
