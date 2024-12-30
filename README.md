@@ -24,18 +24,20 @@ npx prisma migrate dev
 
 3. Start development server:
 npm run dev
+```
 
-##  Project Structure
+## Project Structure
+
 src/
-├── app.ts                    # Express app configuration
-├── server.ts                 # Server entry point
-├── routes/                   # API route definitions
-├── controllers/              # Route controllers
-├── services/                 # Business logic
-├── models/                   # Prisma schema models
-├── middlewares/             # Custom middleware
-├── utils/                   # Utility classes
-└── validations/            # Zod validation schemas
+├── app.ts # Express app configuration
+├── server.ts # Server entry point
+├── routes/ # API route definitions
+├── controllers/ # Route controllers
+├── services/ # Business logic
+├── models/ # Prisma schema models
+├── middlewares/ # Custom middleware
+├── utils/ # Utility classes
+└── validations/ # Zod validation schemas
 
 Error Handling
 The application uses custom exception handling through the HttpException class with specific error types like:
@@ -45,4 +47,3 @@ UnauthorizedException (401)
 ForbiddenException (403)
 NotFoundException (404)
 InternalServerErrorException (500)
-```
