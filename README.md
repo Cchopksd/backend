@@ -1,6 +1,6 @@
-# Restaurant Backend
+# Backend Template
 
-A Node.js backend service use oop concept.
+A Node.js backend service use oop concept with Typescript.
 
 ## Tech Stack
 
