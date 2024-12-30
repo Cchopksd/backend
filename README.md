@@ -28,6 +28,7 @@ npm run dev
 
 ## Project Structure
 
+```bash
 src/
 ├── app.ts # Express app configuration
 ├── server.ts # Server entry point
@@ -47,3 +48,4 @@ UnauthorizedException (401)
 ForbiddenException (403)
 NotFoundException (404)
 InternalServerErrorException (500)
+```
