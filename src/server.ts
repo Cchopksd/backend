@@ -8,7 +8,7 @@ app.listen(PORT, async () => {
   try {
     // await prisma.$connect();
     // console.log("Database connected.");
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed:", error);
     process.exit(1);
   }

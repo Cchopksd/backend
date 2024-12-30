@@ -1,6 +1,9 @@
 import express, { Application } from "express";
 import cors from "cors";
 import * as bodyParser from "body-parser";
+import helmet from "helmet";
+import morgan from "morgan";
+
 import { ProductRouter } from "./routes/product.route";
 import { ProductService } from "./services/product.service";
 import { exceptionHandler } from "./middlewares/exceptionHandler";
@@ -16,7 +19,16 @@ class App {
   }
 
   private initializeMiddlewares() {
-    this.app.use(cors());
+    this.app.use(helmet());
+    this.app.use(
+      cors({
+        origin: process.env.CORS_ORIGIN || "*",
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        credentials: true,
+      }),
+    );
+    this.app.use(morgan("dev"));
+
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
   }

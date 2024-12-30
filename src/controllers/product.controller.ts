@@ -12,8 +12,12 @@ export class ProductController {
     try {
       const users = await this.productService.getAllProducts();
       res.status(200).json(users);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
+    } catch (error: unknown) {
+      res
+        .status(500)
+        .json({
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
     }
   }
 }
