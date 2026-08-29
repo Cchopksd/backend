@@ -1,0 +1,71 @@
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+  parentId String? @db.Uuid
+  name String
+  slug String
+  parent Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([parentId, slug])
+  @@index([parentId])
+}
+model Product {
+  id String @id @default(uuid()) @db.Uuid
+  sellerId String @db.Uuid
+  categoryId String? @db.Uuid
+  name String
+  slug String
+  description String?
+  media Json?
+  status ProductStatus @default(DRAFT)
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants Variant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  publishedAt DateTime?
+  @@unique([sellerId, slug])
+  @@index([sellerId, status])
+  @@index([categoryId, status])
+  @@index([status, publishedAt])
+}
+model Variant {
+  id String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  name String
+  position Int @default(0)
+  attributes Json
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  skus SKU[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([productId, name])
+  @@index([productId, position])
+}
+model SKU {
+  id String @id @default(uuid()) @db.Uuid
+  variantId String @db.Uuid
+  code String @unique
+  barcode String? @unique
+  priceAmount Int
+  compareAtAmount Int?
+  currency String @default("THB") @db.Char(3)
+  weightGrams Int?
+  isActive Boolean @default(true)
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  inventory Inventory?
+  ledger InventoryLedger[]
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([variantId, isActive])
+}

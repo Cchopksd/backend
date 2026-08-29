@@ -1,0 +1,60 @@
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  PAYMENT_FAILED
+  REFUNDED
+}
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  EXPIRED
+}
+model Order {
+  id String @id @default(uuid()) @db.Uuid
+  orderNumber String @unique
+  customerId String @db.Uuid
+  sellerId String @db.Uuid
+  status OrderStatus @default(PENDING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+  currency String @default("THB") @db.Char(3)
+  subtotalAmount Int
+  discountAmount Int @default(0)
+  shippingAmount Int @default(0)
+  totalAmount Int
+  promotionSnapshot Json?
+  shippingAddress Json
+  statusVersion Int @default(0)
+  customer User @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
+  seller Seller @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
+  items OrderItem[]
+  paymentAttempts PaymentAttempt[]
+  shipments Shipment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  paidAt DateTime?
+  @@index([customerId, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([status, paymentStatus, createdAt])
+}
+model OrderItem {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  skuId String @db.Uuid
+  productName String
+  variantName String
+  skuCode String
+  quantity Int
+  unitPriceAmount Int
+  discountAmount Int @default(0)
+  totalAmount Int
+  promotionSnapshot Json?
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku SKU @relation(fields: [skuId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@index([skuId])
+}

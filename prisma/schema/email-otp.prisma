@@ -1,0 +1,11 @@
+model EmailOtpChallenge {
+  id String @id @default(uuid()) @db.Uuid
+  email String
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([email, createdAt])
+  @@index([expiresAt])
+}

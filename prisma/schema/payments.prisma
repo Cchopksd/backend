@@ -1,0 +1,30 @@
+enum PaymentMethod {
+  PROMPTPAY
+  CARD
+}
+model PaymentAttempt {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  customerId String @db.Uuid
+  attemptNumber Int
+  method PaymentMethod
+  status PaymentStatus @default(PENDING)
+  amount Int
+  currency String @default("THB") @db.Char(3)
+  providerChargeId String? @unique
+  providerSourceId String?
+  providerEventId String? @unique
+  idempotencyKey String? @unique
+  providerPayload Json?
+  failureCode String?
+  expiresAt DateTime?
+  version Int @default(0)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer User @relation("PaymentCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+  @@unique([orderId, attemptNumber])
+  @@index([orderId, status])
+  @@index([status, createdAt])
+}

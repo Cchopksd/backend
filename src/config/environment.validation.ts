@@ -31,6 +31,10 @@ class EnvironmentVariables {
   @Min(100)
   @Max(30000)
   RABBITMQ_CONNECTION_TIMEOUT_MS = 5000;
+
+  FIREBASE_PROJECT_ID?: string;
+  FIREBASE_CLIENT_EMAIL?: string;
+  FIREBASE_PRIVATE_KEY?: string;
 }
 
 export function validateEnvironment(

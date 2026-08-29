@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module.js';
 import { CacheModule } from './infrastructure/cache/cache.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { RabbitMqModule } from './infrastructure/queue/rabbitmq.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RabbitMqModule } from './infrastructure/queue/rabbitmq.module.js';
     DatabaseModule,
     CacheModule,
     RabbitMqModule,
+    AuthModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

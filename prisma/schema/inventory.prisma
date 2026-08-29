@@ -1,0 +1,38 @@
+enum LedgerType {
+  RESTOCK
+  RESERVE
+  RELEASE
+  COMMIT
+  ADJUSTMENT
+}
+model Inventory {
+  id String @id @default(uuid()) @db.Uuid
+  skuId String @unique @db.Uuid
+  availableQuantity Int @default(0)
+  reservedQuantity Int @default(0)
+  soldQuantity Int @default(0)
+  flashSaleAllocation Int @default(0)
+  incomingQuantity Int @default(0)
+  version Int @default(0)
+  sku SKU @relation(fields: [skuId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([updatedAt])
+}
+model InventoryLedger {
+  id String @id @default(uuid()) @db.Uuid
+  skuId String @db.Uuid
+  type LedgerType
+  quantityDelta Int
+  availableDelta Int @default(0)
+  reservedDelta Int @default(0)
+  soldDelta Int @default(0)
+  referenceType String?
+  referenceId String?
+  idempotencyKey String? @unique
+  metadata Json?
+  sku SKU @relation(fields: [skuId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@index([skuId, createdAt])
+  @@index([referenceType, referenceId])
+}
