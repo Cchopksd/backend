@@ -8,6 +8,9 @@ import { CacheModule } from './infrastructure/cache/cache.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { RabbitMqModule } from './infrastructure/queue/rabbitmq.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { CartModule } from './modules/cart/cart.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
 
 @Module({
   imports: [
@@ -17,6 +20,9 @@ import { AuthModule } from './modules/auth/auth.module.js';
     CacheModule,
     RabbitMqModule,
     AuthModule,
+    CatalogModule,
+    CartModule,
+    InventoryModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

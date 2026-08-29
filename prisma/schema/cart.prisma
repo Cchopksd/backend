@@ -20,6 +20,7 @@ model CartItem {
   cartId String @db.Uuid
   skuId String @db.Uuid
   quantity Int
+  selected Boolean @default(true)
   cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
   sku SKU @relation(fields: [skuId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())

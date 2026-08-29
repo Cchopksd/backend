@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { AuthService } from '../services/auth.service.js';
-import { OtpExpiredError, OtpInvalidError, OtpResendCooldownError } from '../errors/auth.error.js';
+import { OtpExpiredError, OtpInvalidError, OtpRateLimitedError, OtpResendCooldownError } from '../errors/auth.error.js';
 
 describe('AuthService', () => {
   const emailSender = { sendOtp: vi.fn() };
@@ -35,6 +35,16 @@ describe('AuthService', () => {
     await expect(service.requestEmailOtp('customer@example.com', '127.0.0.1')).rejects.toBeInstanceOf(OtpResendCooldownError);
   });
 
+  it('replaces the prior active challenge when an email is resent after the cooldown', async () => {
+    repository.findLatestActiveChallenge.mockResolvedValue({ createdAt: new Date(Date.now() - 60_001) });
+    repository.replaceChallenge.mockResolvedValue({ id: 'replacement-challenge', expiresAt: new Date(Date.now() + 300_000) });
+
+    await service.requestEmailOtp('customer@example.com', '127.0.0.1');
+
+    expect(repository.replaceChallenge).toHaveBeenCalledOnce();
+    expect(emailSender.sendOtp).toHaveBeenCalledOnce();
+  });
+
   it('consumes a valid OTP once and returns a Firebase custom token', async () => {
     const markUsed = vi.fn();
     repository.withLockedChallenge.mockImplementation(async (_id: string, callback: (challenge: unknown, commands: unknown) => Promise<string>) => callback({ email: 'customer@example.com', expiresAt: new Date(Date.now() + 60_000), attempts: 0, usedAt: null, codeHash: 'hash' }, { markUsed, incrementAttempts: vi.fn() }));
@@ -54,6 +64,32 @@ describe('AuthService', () => {
     repository.withLockedChallenge.mockResolvedValue(null);
     await expect(service.verifyEmailOtp('challenge-id', '123456')).rejects.toBeInstanceOf(OtpInvalidError);
     expect(firebase.getOrCreateUserByVerifiedEmail).not.toHaveBeenCalled();
+  });
+
+  it('increments attempts for an invalid OTP and blocks an exhausted challenge', async () => {
+    const incrementAttempts = vi.fn();
+    repository.withLockedChallenge.mockImplementation(async (_id: string, callback: (challenge: unknown, commands: unknown) => Promise<string>) => callback({ email: 'customer@example.com', expiresAt: new Date(Date.now() + 60_000), attempts: 0, usedAt: null, codeHash: 'hash' }, { markUsed: vi.fn(), incrementAttempts }));
+    otpCrypto.verify.mockResolvedValue(false);
+
+    await expect(service.verifyEmailOtp('challenge-id', '000000')).rejects.toBeInstanceOf(OtpInvalidError);
+    expect(incrementAttempts).toHaveBeenCalledOnce();
+
+    repository.withLockedChallenge.mockImplementation(async (_id: string, callback: (challenge: unknown, commands: unknown) => Promise<string>) => callback({ email: 'customer@example.com', expiresAt: new Date(Date.now() + 60_000), attempts: 5, usedAt: null, codeHash: 'hash' }, { markUsed: vi.fn(), incrementAttempts: vi.fn() }));
+    await expect(service.verifyEmailOtp('challenge-id', '000000')).rejects.toBeInstanceOf(OtpRateLimitedError);
+    expect(otpCrypto.verify).toHaveBeenCalledOnce();
+  });
+
+  it('rate limits OTP requests by either email or IP', async () => {
+    const increment = vi.fn().mockResolvedValue(6);
+    const rateLimitedService = new AuthService(repository, firebase, { getClient: () => ({ incr: increment, expire: vi.fn() }) }, otpCrypto, emailSender);
+
+    await expect(rateLimitedService.requestEmailOtp('customer@example.com', '127.0.0.1')).rejects.toBeInstanceOf(OtpRateLimitedError);
+    expect(increment).toHaveBeenCalledWith('auth:otp:email:customer@example.com');
+
+    const ipIncrement = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(6);
+    const ipRateLimitedService = new AuthService(repository, firebase, { getClient: () => ({ incr: ipIncrement, expire: vi.fn() }) }, otpCrypto, emailSender);
+    await expect(ipRateLimitedService.requestEmailOtp('another@example.com', '127.0.0.1')).rejects.toBeInstanceOf(OtpRateLimitedError);
+    expect(ipIncrement).toHaveBeenLastCalledWith('auth:otp:ip:127.0.0.1');
   });
 
   it('does not accept client-provided Google roles', async () => {

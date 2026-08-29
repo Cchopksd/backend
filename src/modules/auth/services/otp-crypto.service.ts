@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
 
 @Injectable()
 export class OtpCryptoService {
   generateCode(): string {
-    return String(Math.floor(100000 + Math.random() * 900000));
+    return randomInt(100000, 1_000_000).toString();
   }
 
   async hash(code: string): Promise<string> {
@@ -17,6 +17,7 @@ export class OtpCryptoService {
     const [saltValue, hashValue] = encodedHash.split(':');
     if (!saltValue || !hashValue) return false;
     const expected = Buffer.from(hashValue, 'base64url');
+    if (expected.length !== 32) return false;
     const actual = await this.deriveKey(code, Buffer.from(saltValue, 'base64url'), expected.length);
     return expected.length === actual.length && timingSafeEqual(expected, actual);
   }
