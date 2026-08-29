@@ -17,6 +17,7 @@ enum PaymentStatus {
 model Order {
   id String @id @default(uuid()) @db.Uuid
   orderNumber String @unique
+  checkoutReference String? @unique
   customerId String @db.Uuid
   sellerId String @db.Uuid
   status OrderStatus @default(PENDING_PAYMENT)

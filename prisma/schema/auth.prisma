@@ -20,6 +20,10 @@ model User {
   orders Order[] @relation("CustomerOrders")
   paymentAttempts PaymentAttempt[] @relation("PaymentCustomer")
   auditLogs AuditLog[] @relation("AuditActor")
+  couponUsages CouponUsage[]
+  couponRedemptions CouponRedemption[]
+  flashSalePurchases FlashSalePurchase[]
+  flashSaleReservations FlashSaleReservation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([role])

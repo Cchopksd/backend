@@ -35,6 +35,18 @@ class EnvironmentVariables {
   FIREBASE_PROJECT_ID?: string;
   FIREBASE_CLIENT_EMAIL?: string;
   FIREBASE_PRIVATE_KEY?: string;
+
+  OMISE_SECRET_KEY?: string;
+  OMISE_WEBHOOK_SECRET?: string;
+
+  @IsUrl({ require_tld: false })
+  OMISE_API_URL = 'https://api.omise.co';
+
+  @Transform(({ value }: { value: unknown }) => Number(value))
+  @IsInt()
+  @Min(100)
+  @Max(30000)
+  OMISE_TIMEOUT_MS = 10000;
 }
 
 export function validateEnvironment(

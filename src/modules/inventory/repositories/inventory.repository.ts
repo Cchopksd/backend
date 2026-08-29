@@ -62,7 +62,7 @@ export class InventoryRepository {
     }
   }
 
-  private async applyMutationInTransaction(
+  async applyMutationInTransaction(
     transaction: TransactionClient,
     input: InventoryMutation,
   ): Promise<InventoryMutationResult | null> {

@@ -28,3 +28,19 @@ model PaymentAttempt {
   @@index([orderId, status])
   @@index([status, createdAt])
 }
+model PaymentWebhookEvent {
+  id String @id @default(uuid()) @db.Uuid
+  providerEventId String @unique
+  eventType String
+  providerChargeId String
+  payload Json
+  processedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([providerChargeId, createdAt])
+}
+model WorkerJobExecution {
+  id String @id @default(uuid()) @db.Uuid
+  jobId String @unique
+  jobType String
+  createdAt DateTime @default(now())
+}

@@ -11,6 +11,10 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { CartModule } from './modules/cart/cart.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { PromotionsModule } from './modules/promotions/promotions.module.js';
+import { PricingModule } from './modules/pricing/pricing.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
 
 @Module({
   imports: [
@@ -23,6 +27,10 @@ import { InventoryModule } from './modules/inventory/inventory.module.js';
     CatalogModule,
     CartModule,
     InventoryModule,
+    PromotionsModule,
+    PricingModule,
+    OrdersModule,
+    PaymentsModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

@@ -6,6 +6,7 @@ import { validateEnvironment } from './environment.validation.js';
 import rabbitMqConfig from './rabbitmq.config.js';
 import redisConfig from './redis.config.js';
 import firebaseConfig from './firebase.config.js';
+import omiseConfig from './omise.config.js';
 
 @Global()
 @Module({
@@ -13,7 +14,14 @@ import firebaseConfig from './firebase.config.js';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [appConfig, databaseConfig, redisConfig, rabbitMqConfig, firebaseConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        redisConfig,
+        rabbitMqConfig,
+        firebaseConfig,
+        omiseConfig,
+      ],
       validate: validateEnvironment,
     }),
   ],

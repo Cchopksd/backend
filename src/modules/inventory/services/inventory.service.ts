@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import {
   InsufficientStockError,
   InvalidInventoryMutationError,
@@ -62,6 +63,36 @@ export class InventoryService {
     });
   }
 
+  async reserveInTransaction(
+    transaction: Prisma.TransactionClient,
+    skuId: string,
+    quantity: number,
+    channel: StockChannel,
+    reference: StockReference,
+  ): Promise<InventorySnapshot> {
+    this.assertPositiveQuantity(quantity);
+    this.assertReference(reference);
+    const result = await this.repository.applyMutationInTransaction(
+      transaction,
+      {
+        skuId,
+        type: 'RESERVE',
+        quantityDelta: -quantity,
+        availableDelta: -quantity,
+        reservedDelta: quantity,
+        soldDelta: 0,
+        flashSaleAllocationDelta: channel === 'FLASH_SALE' ? -quantity : 0,
+        standardAvailabilityRequired: channel === 'STANDARD' ? quantity : 0,
+        metadata: { channel },
+        ...reference,
+      },
+    );
+    if (result) return result.inventory;
+    const inventory = await this.repository.findBySkuId(skuId);
+    if (!inventory) throw new InventoryNotFoundError();
+    throw new InsufficientStockError();
+  }
+
   async release(
     skuId: string,
     quantity: number,
@@ -82,6 +113,35 @@ export class InventoryService {
     });
   }
 
+  async releaseInTransaction(
+    transaction: Prisma.TransactionClient,
+    skuId: string,
+    quantity: number,
+    channel: StockChannel,
+    reference: StockReference,
+  ): Promise<InventorySnapshot> {
+    this.assertPositiveQuantity(quantity);
+    this.assertReference(reference);
+    const result = await this.repository.applyMutationInTransaction(
+      transaction,
+      {
+        skuId,
+        type: 'RELEASE',
+        quantityDelta: quantity,
+        availableDelta: quantity,
+        reservedDelta: -quantity,
+        soldDelta: 0,
+        flashSaleAllocationDelta: channel === 'FLASH_SALE' ? quantity : 0,
+        metadata: { channel },
+        ...reference,
+      },
+    );
+    if (result) return result.inventory;
+    const inventory = await this.repository.findBySkuId(skuId);
+    if (!inventory) throw new InventoryNotFoundError();
+    throw new InsufficientStockError();
+  }
+
   async commit(
     skuId: string,
     quantity: number,
@@ -97,6 +157,32 @@ export class InventoryService {
       soldDelta: quantity,
       ...reference,
     });
+  }
+
+  async commitInTransaction(
+    transaction: Prisma.TransactionClient,
+    skuId: string,
+    quantity: number,
+    reference: StockReference,
+  ): Promise<InventorySnapshot> {
+    this.assertPositiveQuantity(quantity);
+    this.assertReference(reference);
+    const result = await this.repository.applyMutationInTransaction(
+      transaction,
+      {
+        skuId,
+        type: 'COMMIT',
+        quantityDelta: -quantity,
+        availableDelta: 0,
+        reservedDelta: -quantity,
+        soldDelta: quantity,
+        ...reference,
+      },
+    );
+    if (result) return result.inventory;
+    const inventory = await this.repository.findBySkuId(skuId);
+    if (!inventory) throw new InventoryNotFoundError();
+    throw new InsufficientStockError();
   }
 
   async setFlashSaleAllocation(

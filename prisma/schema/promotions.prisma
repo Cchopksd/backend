@@ -25,9 +25,34 @@ model Coupon {
   endsAt DateTime
   status PromotionStatus @default(DRAFT)
   restrictions Json?
+  usages CouponUsage[]
+  redemptions CouponRedemption[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([status, startsAt, endsAt])
+}
+model CouponUsage {
+  id String @id @default(uuid()) @db.Uuid
+  couponId String @db.Uuid
+  userId String @db.Uuid
+  usageCount Int @default(0)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([couponId, userId])
+  @@index([userId])
+}
+model CouponRedemption {
+  id String @id @default(uuid()) @db.Uuid
+  couponId String @db.Uuid
+  userId String @db.Uuid
+  referenceId String
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@unique([couponId, referenceId])
+  @@index([userId, createdAt])
 }
 model Bundle {
   id String @id @default(uuid()) @db.Uuid
@@ -49,7 +74,34 @@ model FlashSale {
   startsAt DateTime
   endsAt DateTime
   items Json
+  purchases FlashSalePurchase[]
+  reservations FlashSaleReservation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([status, startsAt, endsAt])
+}
+model FlashSalePurchase {
+  id String @id @default(uuid()) @db.Uuid
+  flashSaleId String @db.Uuid
+  skuId String @db.Uuid
+  userId String @db.Uuid
+  quantity Int
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([flashSaleId, skuId, userId])
+}
+model FlashSaleReservation {
+  id String @id @default(uuid()) @db.Uuid
+  flashSaleId String @db.Uuid
+  skuId String @db.Uuid
+  userId String @db.Uuid
+  quantity Int
+  referenceId String
+  idempotencyKey String @unique
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  @@index([flashSaleId, skuId, userId])
 }
