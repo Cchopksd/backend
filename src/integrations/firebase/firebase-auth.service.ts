@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { App, applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { Auth, DecodedIdToken, getAuth } from 'firebase-admin/auth';
@@ -38,6 +38,39 @@ export class FirebaseAuthService {
     return this.auth.createCustomToken(uid);
   }
 
+  async signInWithEmailAndPassword(email: string, password: string): Promise<string> {
+    const webApiKey = this.configService.get<string>('firebase.webApiKey');
+    if (!webApiKey) {
+      throw new ServiceUnavailableException({ error: 'AUTH_PROVIDER_UNAVAILABLE', message: 'Email/password sign-in is temporarily unavailable' });
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(webApiKey)}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (error: unknown) {
+      throw new ServiceUnavailableException({ error: 'AUTH_PROVIDER_UNAVAILABLE', message: 'Email/password sign-in is temporarily unavailable' }, { cause: error });
+    }
+
+    if (!response.ok) {
+      throw new UnauthorizedException({ error: 'AUTH_INVALID_CREDENTIALS', message: 'Invalid email or password' });
+    }
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error: unknown) {
+      throw new ServiceUnavailableException({ error: 'AUTH_PROVIDER_UNAVAILABLE', message: 'Email/password sign-in is temporarily unavailable' }, { cause: error });
+    }
+    if (!isPasswordSignInResponse(payload)) {
+      throw new ServiceUnavailableException({ error: 'AUTH_PROVIDER_UNAVAILABLE', message: 'Email/password sign-in is temporarily unavailable' });
+    }
+    return payload.idToken;
+  }
+
   private get auth(): Auth {
     return getAuth(this.getApp());
   }
@@ -67,4 +100,8 @@ export class FirebaseAuthService {
   private mapUser(user: { uid: string; email?: string; emailVerified: boolean; displayName?: string }): FirebaseUser {
     return { uid: user.uid, email: user.email, emailVerified: user.emailVerified, displayName: user.displayName };
   }
+}
+
+function isPasswordSignInResponse(value: unknown): value is { idToken: string } {
+  return typeof value === 'object' && value !== null && 'idToken' in value && typeof value.idToken === 'string' && value.idToken.length > 0;
 }

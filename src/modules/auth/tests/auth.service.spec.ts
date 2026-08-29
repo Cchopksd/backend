@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { AuthService } from '../services/auth.service.js';
-import { OtpExpiredError, OtpInvalidError, OtpRateLimitedError, OtpResendCooldownError } from '../errors/auth.error.js';
+import { AuthSignInRateLimitedError, OtpExpiredError, OtpInvalidError, OtpRateLimitedError, OtpResendCooldownError } from '../errors/auth.error.js';
 
 describe('AuthService', () => {
   const emailSender = { sendOtp: vi.fn() };
@@ -12,7 +12,7 @@ describe('AuthService', () => {
     upsertUser: vi.fn(),
     findUserByFirebaseUid: vi.fn(),
   };
-  const firebase = { getOrCreateUserByVerifiedEmail: vi.fn(), createCustomToken: vi.fn() };
+  const firebase = { getOrCreateUserByVerifiedEmail: vi.fn(), createCustomToken: vi.fn(), signInWithEmailAndPassword: vi.fn(), verifyIdToken: vi.fn() };
   const redis = { getClient: () => ({ incr: vi.fn().mockResolvedValue(1), expire: vi.fn() }) };
   const otpCrypto = { generateCode: vi.fn(() => '123456'), hash: vi.fn().mockResolvedValue('hash'), verify: vi.fn() };
   const service = new AuthService(repository, firebase, redis, otpCrypto, emailSender);
@@ -97,6 +97,33 @@ describe('AuthService', () => {
     const user = await service.resolveGoogleUser({ uid: 'firebase-user', email: 'customer@example.com', emailVerified: true, signInProvider: 'google.com' });
     expect(user.role).toBe('CUSTOMER');
     expect(repository.upsertUser).toHaveBeenCalledWith(expect.not.objectContaining({ role: expect.anything() }));
+  });
+
+  it('signs in verified email/password users and returns a custom token', async () => {
+    firebase.signInWithEmailAndPassword.mockResolvedValue('firebase-id-token');
+    firebase.verifyIdToken.mockResolvedValue({ uid: 'firebase-user', email: 'customer@example.com', emailVerified: true, displayName: 'Customer' });
+    repository.upsertUser.mockResolvedValue({ id: 'local-user', firebaseUid: 'firebase-user', email: 'customer@example.com', displayName: 'Customer', role: 'CUSTOMER' });
+    firebase.createCustomToken.mockResolvedValue('custom-token');
+
+    await expect(service.signInWithEmailPassword(' Customer@Example.com ', 'correct-password', '127.0.0.1')).resolves.toEqual(expect.objectContaining({ customToken: 'custom-token' }));
+    expect(firebase.signInWithEmailAndPassword).toHaveBeenCalledWith('customer@example.com', 'correct-password');
+    expect(firebase.verifyIdToken).toHaveBeenCalledWith('firebase-id-token');
+  });
+
+  it('does not create a profile for an unverified email/password account', async () => {
+    firebase.signInWithEmailAndPassword.mockResolvedValue('firebase-id-token');
+    firebase.verifyIdToken.mockResolvedValue({ uid: 'firebase-user', email: 'customer@example.com', emailVerified: false });
+
+    await expect(service.signInWithEmailPassword('customer@example.com', 'correct-password', '127.0.0.1')).rejects.toMatchObject({ response: expect.objectContaining({ error: 'AUTH_INVALID_CREDENTIALS' }) });
+    expect(repository.upsertUser).not.toHaveBeenCalled();
+  });
+
+  it('rate limits email/password sign-in by email and IP', async () => {
+    const increment = vi.fn().mockResolvedValue(11);
+    const rateLimitedService = new AuthService(repository, firebase, { getClient: () => ({ incr: increment, expire: vi.fn() }) }, otpCrypto, emailSender);
+
+    await expect(rateLimitedService.signInWithEmailPassword('customer@example.com', 'correct-password', '127.0.0.1')).rejects.toBeInstanceOf(AuthSignInRateLimitedError);
+    expect(increment).toHaveBeenCalledWith('auth:password:email:customer@example.com');
   });
 
   it('uses stable status codes for typed errors', () => {

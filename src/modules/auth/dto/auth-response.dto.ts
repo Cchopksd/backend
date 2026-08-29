@@ -15,6 +15,7 @@ export class OtpRequestResponseDto {
 }
 
 export class OtpVerificationResponseDto {
+  @ApiProperty() accessToken!: string;
   @ApiProperty() customToken!: string;
   @ApiProperty({ type: AuthUserResponseDto }) user!: AuthUserResponseDto;
 }

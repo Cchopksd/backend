@@ -15,6 +15,7 @@ export type OtpChallenge = {
 
 type UserRow = AuthenticatedUser;
 type ChallengeRow = OtpChallenge;
+export type AuthSession = { id: string; userId: string; refreshTokenHash: string; expiresAt: Date; revokedAt: Date | null };
 
 @Injectable()
 export class AuthRepository {
@@ -24,6 +25,11 @@ export class AuthRepository {
     const rows = await this.prisma.$queryRaw<UserRow[]>`
       SELECT "id", "firebaseUid", "email", "displayName", "role"
       FROM "User" WHERE "firebaseUid" = ${firebaseUid} LIMIT 1`;
+    return rows[0] ?? null;
+  }
+
+  async findUserById(id: string): Promise<AuthenticatedUser | null> {
+    const rows = await this.prisma.$queryRaw<UserRow[]>`SELECT "id", "firebaseUid", "email", "displayName", "role" FROM "User" WHERE "id" = ${id}::uuid LIMIT 1`;
     return rows[0] ?? null;
   }
 
@@ -79,5 +85,22 @@ export class AuthRepository {
         },
       });
     });
+  }
+
+  async createSession(input: { id: string; userId: string; refreshTokenHash: string; expiresAt: Date }): Promise<void> {
+    await this.prisma.$executeRaw`INSERT INTO "AuthSession" ("id", "userId", "refreshTokenHash", "expiresAt", "createdAt", "updatedAt") VALUES (${input.id}::uuid, ${input.userId}::uuid, ${input.refreshTokenHash}, ${input.expiresAt}, NOW(), NOW())`;
+  }
+
+  async getActiveSession(id: string): Promise<AuthSession | null> {
+    const rows = await this.prisma.$queryRaw<AuthSession[]>`SELECT "id", "userId", "refreshTokenHash", "expiresAt", "revokedAt" FROM "AuthSession" WHERE "id" = ${id}::uuid AND "revokedAt" IS NULL AND "expiresAt" > NOW() LIMIT 1`;
+    return rows[0] ?? null;
+  }
+
+  async rotateSession(id: string, refreshTokenHash: string): Promise<void> {
+    await this.prisma.$executeRaw`UPDATE "AuthSession" SET "refreshTokenHash" = ${refreshTokenHash}, "updatedAt" = NOW() WHERE "id" = ${id}::uuid AND "revokedAt" IS NULL`;
+  }
+
+  async revokeSession(id: string): Promise<void> {
+    await this.prisma.$executeRaw`UPDATE "AuthSession" SET "revokedAt" = NOW(), "updatedAt" = NOW() WHERE "id" = ${id}::uuid AND "revokedAt" IS NULL`;
   }
 }

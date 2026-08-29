@@ -25,3 +25,7 @@ export class OtpResendCooldownError extends AuthError {
 export class AuthPermissionDeniedError extends AuthError {
   constructor() { super('AUTH_PERMISSION_DENIED', 'You do not have permission to perform this action', HttpStatus.FORBIDDEN); }
 }
+
+export class AuthSignInRateLimitedError extends AuthError {
+  constructor() { super('AUTH_SIGN_IN_RATE_LIMITED', 'Too many sign-in attempts. Please try again later.', HttpStatus.TOO_MANY_REQUESTS); }
+}

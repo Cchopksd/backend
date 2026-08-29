@@ -7,6 +7,8 @@ import rabbitMqConfig from './rabbitmq.config.js';
 import redisConfig from './redis.config.js';
 import firebaseConfig from './firebase.config.js';
 import omiseConfig from './omise.config.js';
+import authConfig from './auth.config.js';
+import minioConfig from './minio.config.js';
 
 @Global()
 @Module({
@@ -21,6 +23,8 @@ import omiseConfig from './omise.config.js';
         rabbitMqConfig,
         firebaseConfig,
         omiseConfig,
+        authConfig,
+        minioConfig,
       ],
       validate: validateEnvironment,
     }),

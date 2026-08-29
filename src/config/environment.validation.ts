@@ -1,5 +1,5 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsIn, IsInt, IsUrl, Max, Min, validateSync } from 'class-validator';
+import { IsIn, IsInt, IsString, IsUrl, Max, Min, MinLength, validateSync } from 'class-validator';
 
 const DEFAULT_DATABASE_URL =
   'postgresql://postgres:postgres@localhost:5432/marketplace?schema=public';
@@ -35,6 +35,15 @@ class EnvironmentVariables {
   FIREBASE_PROJECT_ID?: string;
   FIREBASE_CLIENT_EMAIL?: string;
   FIREBASE_PRIVATE_KEY?: string;
+  FIREBASE_WEB_API_KEY?: string;
+
+  @IsString()
+  @MinLength(32)
+  AUTH_ACCESS_TOKEN_SECRET!: string;
+
+  @IsString()
+  @MinLength(32)
+  AUTH_REFRESH_TOKEN_SECRET!: string;
 
   OMISE_SECRET_KEY?: string;
   OMISE_WEBHOOK_SECRET?: string;
@@ -47,6 +56,25 @@ class EnvironmentVariables {
   @Min(100)
   @Max(30000)
   OMISE_TIMEOUT_MS = 10000;
+
+  @IsUrl({ protocols: ['http', 'https'], require_tld: false })
+  MINIO_ENDPOINT = 'http://localhost:9000';
+
+  @IsString()
+  @MinLength(3)
+  MINIO_ACCESS_KEY!: string;
+
+  @IsString()
+  @MinLength(8)
+  MINIO_SECRET_KEY!: string;
+
+  @IsString()
+  @MinLength(3)
+  MINIO_BUCKET = 'marketplace';
+
+  @IsString()
+  @MinLength(1)
+  MINIO_REGION = 'us-east-1';
 }
 
 export function validateEnvironment(
