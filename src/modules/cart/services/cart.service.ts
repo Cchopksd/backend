@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/types/auth-user.type.js';
-import type { CartResponseDto } from '../dto/cart.dto.js';
+import type { CartPromotionPreviewDto, CartResponseDto, CartSummaryDto } from '../dto/cart.dto.js';
+import { PricingService } from '../../pricing/services/pricing.service.js';
+import { BundleService } from '../../promotions/bundles/services/bundle.service.js';
 import {
   CartItemNotFoundError,
   CartQuantityLimitError,
@@ -11,7 +13,11 @@ import { CartRepository, type CartItemRecord, type CartSkuRecord } from '../repo
 
 @Injectable()
 export class CartService {
-  constructor(private readonly repository: CartRepository) {}
+  constructor(
+    private readonly repository: CartRepository,
+    private readonly pricing: PricingService,
+    private readonly bundles: BundleService,
+  ) {}
 
   async get(user: AuthenticatedUser): Promise<CartResponseDto> {
     return this.toResponse(await this.repository.listItems(user.id));
@@ -48,6 +54,38 @@ export class CartService {
 
   async remove(user: AuthenticatedUser, itemId: string): Promise<void> {
     if (!(await this.repository.removeItem(user.id, itemId))) throw new CartItemNotFoundError();
+  }
+
+  async preview(user: AuthenticatedUser, request: CartPromotionPreviewDto): Promise<CartSummaryDto> {
+    const items = (await this.repository.listItems(user.id)).filter(
+      (item) => item.selected && item.skuActive && item.productActive && item.sellerActive && item.quantity <= item.availableQuantity,
+    );
+    const eligibleBundles = await this.bundles.findEligibleForCart(
+      new Map(items.map((item) => [item.skuId, item.quantity])),
+    );
+    if (items.length === 0) {
+      return { currency: 'THB', selectedItemCount: 0, baseSubtotalAmount: 0, bundleDiscountAmount: 0, voucherDiscountAmount: 0, estimatedShippingAmount: 0, estimatedTotalAmount: 0, couponCode: null, couponState: null, eligibleBundleIds: [] };
+    }
+    const pricing = await this.pricing.calculate({
+      userId: user.id,
+      items: items.map((item) => ({ skuId: item.skuId, quantity: item.quantity })),
+      bundles: (request.bundleIds ?? []).map((bundleId) => ({ bundleId })),
+      couponCode: request.couponCode,
+      // Shipping is address-dependent and is deliberately not accepted from the browser.
+      shippingAmount: 0,
+    });
+    return {
+      currency: pricing.currency,
+      selectedItemCount: items.length,
+      baseSubtotalAmount: pricing.baseSubtotalAmount,
+      bundleDiscountAmount: pricing.bundleDiscountAmount,
+      voucherDiscountAmount: pricing.couponDiscountAmount,
+      estimatedShippingAmount: pricing.shippingAmount,
+      estimatedTotalAmount: pricing.finalAmount,
+      couponCode: pricing.coupon?.couponCode ?? null,
+      couponState: pricing.coupon?.state ?? null,
+      eligibleBundleIds: eligibleBundles.flatMap((bundle) => bundle.bundleId ? [bundle.bundleId] : []),
+    };
   }
 
   private async requireItem(user: AuthenticatedUser, itemId: string): Promise<CartItemRecord> {

@@ -41,6 +41,19 @@ export class BundleService {
     return this.result(bundle, 'eligible', availableQuantity);
   }
 
+  async findEligibleForCart(
+    quantities: Map<string, number>,
+    now = new Date(),
+  ): Promise<BundleEvaluationResult[]> {
+    const bundles = await this.repository.findActive();
+    const results = await Promise.all(bundles.map((bundle) => this.evaluate(bundle.id, now)));
+    return results.filter((result) =>
+      result.state === 'eligible' && result.items?.every(
+        (item) => (quantities.get(item.skuId) ?? 0) >= item.quantity,
+      ),
+    );
+  }
+
   private lifecycleResult(
     bundle: Bundle,
     now: Date,

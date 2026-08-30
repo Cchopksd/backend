@@ -20,6 +20,13 @@ export class BundleRepository {
     return rows[0] ? this.toBundle(rows[0]) : null;
   }
 
+  async findActive(): Promise<Bundle[]> {
+    const rows = await this.prisma.$queryRaw<BundleRow[]>`
+      SELECT "id", "name", "bundlePriceAmount", "currency", "status", "startsAt", "endsAt", "items"
+      FROM "Bundle" WHERE "status" = 'ACTIVE'::"PromotionStatus"`;
+    return rows.map((row) => this.toBundle(row));
+  }
+
   async findSkuAvailability(
     skuIds: string[],
   ): Promise<BundleSkuAvailability[]> {

@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse,
 import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { FirebaseAuthGuard, type AuthenticatedRequest } from '../../auth/guards/firebase-auth.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
-import { AddCartItemDto, CartItemParamsDto, CartResponseDto, SetCartItemSelectionDto, UpdateCartItemDto } from '../dto/cart.dto.js';
+import { AddCartItemDto, CartItemParamsDto, CartPromotionPreviewDto, CartResponseDto, CartSummaryDto, SetCartItemSelectionDto, UpdateCartItemDto } from '../dto/cart.dto.js';
 import { CartService } from '../services/cart.service.js';
 
 @ApiTags('cart')
@@ -30,6 +30,12 @@ export class CartController {
   @ApiOkResponse({ type: CartResponseDto })
   setAllSelection(@Req() request: AuthenticatedRequest, @Body() dto: SetCartItemSelectionDto): Promise<CartResponseDto> {
     return this.service.setAllSelection(request.user!, dto.selected);
+  }
+
+  @Post('summary')
+  @ApiOkResponse({ type: CartSummaryDto })
+  preview(@Req() request: AuthenticatedRequest, @Body() dto: CartPromotionPreviewDto): Promise<CartSummaryDto> {
+    return this.service.preview(request.user!, dto);
   }
 
   @Patch('items/:itemId/selection')
