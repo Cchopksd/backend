@@ -107,4 +107,13 @@ describe('OmiseService', () => {
       'expires_at=',
     );
   });
+
+  it('sends a stable provider idempotency key for concurrent card-charge retries', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: vi.fn().mockResolvedValue({ object: 'charge', id: 'chrg_card', status: 'pending', amount: 1200, currency: 'THB' }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await Promise.all([service.createCardCharge({ amount: 1200, currency: 'THB', token: 'tokn_test', idempotencyKey: 'attempt-1' }), service.createCardCharge({ amount: 1200, currency: 'THB', token: 'tokn_test', idempotencyKey: 'attempt-1' })]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).headers).toMatchObject({ 'Idempotency-Key': 'attempt-1' });
+    expect((fetchMock.mock.calls[1]![1] as RequestInit).headers).toMatchObject({ 'Idempotency-Key': 'attempt-1' });
+  });
 });

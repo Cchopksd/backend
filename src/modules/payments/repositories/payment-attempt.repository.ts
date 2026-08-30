@@ -68,6 +68,9 @@ export class PaymentAttemptRepository {
         providerChargeId: charge.chargeId,
         providerSourceId: charge.sourceId,
         expiresAt: charge.expiresAt,
+        providerPayload: charge.promptPayQrPayload
+          ? { promptPayQrPayload: charge.promptPayQrPayload }
+          : undefined,
       },
     });
     if (updated.count === 1) return this.findById(attemptId, customerId);
@@ -118,6 +121,27 @@ export class PaymentAttemptRepository {
       where: { id: attemptId, customerId },
     });
     return attempt ? this.toAttempt(attempt) : null;
+  }
+
+  async findCustomerPaymentState(orderId: string, customerId: string): Promise<{
+    orderId: string; orderNumber: string; orderStatus: string; amount: number; currency: string;
+    attempt: (PaymentAttempt & { promptPayQrPayload?: string }) | null;
+  } | null> {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, customerId },
+      select: { id: true, orderNumber: true, status: true, totalAmount: true, currency: true, paymentAttempts: { orderBy: { attemptNumber: 'desc' }, take: 1 } },
+    });
+    if (!order) return null;
+    const raw = order.paymentAttempts[0];
+    if (!raw) return { orderId: order.id, orderNumber: order.orderNumber, orderStatus: order.status, amount: order.totalAmount, currency: order.currency, attempt: null };
+    const payload = raw.providerPayload;
+    const payloadValue =
+      payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>).promptPayQrPayload
+        : undefined;
+    const promptPayQrPayload =
+      typeof payloadValue === 'string' ? payloadValue : undefined;
+    return { orderId: order.id, orderNumber: order.orderNumber, orderStatus: order.status, amount: order.totalAmount, currency: order.currency, attempt: { ...this.toAttempt(raw), ...(promptPayQrPayload ? { promptPayQrPayload } : {}) } };
   }
 
   private toAttempt(attempt: StoredAttempt): PaymentAttempt {

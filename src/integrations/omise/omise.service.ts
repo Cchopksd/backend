@@ -28,6 +28,7 @@ export class OmiseService {
         this.chargeForm(input.amount, input.currency, input.description, {
           card: input.token,
         }),
+        input.idempotencyKey,
       ),
     );
   }
@@ -45,6 +46,7 @@ export class OmiseService {
           currency: input.currency,
           type: 'promptpay',
         }),
+        input.idempotencyKey ? `${input.idempotencyKey}:source` : undefined,
       ),
     );
     return toOmiseCharge(
@@ -54,6 +56,7 @@ export class OmiseService {
           source: source.id,
           expires_at: input.expiresAt?.toISOString(),
         }),
+        input.idempotencyKey ? `${input.idempotencyKey}:charge` : undefined,
       ),
     );
   }
@@ -95,14 +98,14 @@ export class OmiseService {
     if (!matches) throw new OmiseWebhookSignatureError();
   }
 
-  private async post(path: string, body: URLSearchParams): Promise<unknown> {
-    return this.request(path, 'POST', body);
+  private async post(path: string, body: URLSearchParams, idempotencyKey?: string): Promise<unknown> {
+    return this.request(path, 'POST', body, idempotencyKey);
   }
 
   private async request(
     path: string,
     method: 'GET' | 'POST',
-    body?: URLSearchParams,
+    body?: URLSearchParams, idempotencyKey?: string,
   ): Promise<unknown> {
     const secretKey = this.config.get<string>('omise.secretKey');
     if (!secretKey) throw new OmiseConfigurationError();
@@ -119,6 +122,7 @@ export class OmiseService {
           ...(body
             ? { 'Content-Type': 'application/x-www-form-urlencoded' }
             : {}),
+          ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
         },
         signal: controller.signal,
       };

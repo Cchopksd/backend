@@ -5,6 +5,7 @@ export type OmiseCardChargeInput = {
   currency: string;
   token: string;
   description?: string;
+  idempotencyKey?: string;
 };
 
 export type OmisePromptPayChargeInput = {
@@ -12,6 +13,7 @@ export type OmisePromptPayChargeInput = {
   currency: 'THB';
   expiresAt?: Date;
   description?: string;
+  idempotencyKey?: string;
 };
 
 export type OmiseCharge = {

@@ -30,4 +30,5 @@ export type ProviderChargeDetails = {
   chargeId: string;
   sourceId?: string;
   expiresAt?: Date;
+  promptPayQrPayload?: string;
 };
